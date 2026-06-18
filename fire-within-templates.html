@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Fire Within — Quote Card Templates</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..900&family=Fraunces:opsz,wght@9..144,300..700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --coal:#0E0B09;
+    --ash:#1C1714;
+    --ember:#E84B1C;
+    --flame:#F59E2D;
+    --bone:#F2EAE0;
+    --smoke:#8A7C70;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--ash);color:var(--bone);font-family:'Archivo',sans-serif;padding:48px 24px 96px;}
+  .intro{max-width:720px;margin:0 auto 56px;}
+  .intro h1{font-family:'Fraunces',serif;font-weight:400;font-size:34px;letter-spacing:-0.5px;}
+  .intro p{color:var(--smoke);margin-top:10px;font-size:15px;line-height:1.6;}
+  .grid{display:flex;flex-wrap:wrap;gap:40px;justify-content:center;max-width:1200px;margin:0 auto;}
+  .slot{display:flex;flex-direction:column;gap:12px;}
+  .slot .label{font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--smoke);}
+  /* canvases — scaled previews */
+  .ig{width:360px;height:360px;}      /* 1080x1080 at 1/3 */
+  .pin{width:333px;height:500px;}     /* 1000x1500 at 1/3 */
+  .card{position:relative;overflow:hidden;border-radius:6px;background:var(--coal);display:flex;flex-direction:column;}
+  .brand{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:var(--flame);font-weight:600;}
+  .handle{font-size:11px;letter-spacing:0.08em;color:var(--smoke);}
+
+  /* T1 — Ember Floor: glow rising from below */
+  .t1{padding:36px;justify-content:space-between;}
+  .t1::after{content:'';position:absolute;left:0;right:0;bottom:-30%;height:75%;
+    background:radial-gradient(ellipse at 50% 100%, rgba(232,75,28,0.55) 0%, rgba(245,158,45,0.18) 45%, transparent 72%);
+    pointer-events:none;}
+  .t1 .quote{font-family:'Fraunces',serif;font-weight:340;font-size:27px;line-height:1.28;letter-spacing:-0.3px;position:relative;z-index:1;}
+  .t1 .quote em{font-style:italic;color:var(--flame);}
+  .t1 .foot{display:flex;justify-content:space-between;align-items:flex-end;position:relative;z-index:1;}
+
+  /* T2 — Bold Statement: heavy condensed type, ember keyword */
+  .t2{padding:34px;justify-content:center;gap:0;}
+  .t2 .brand{position:absolute;top:30px;left:34px;}
+  .t2 .quote{font-weight:850;font-stretch:80%;text-transform:uppercase;font-size:42px;line-height:1.08;letter-spacing:0.04em;word-spacing:0.1em;}
+  .t2 .quote .hot{color:transparent;background:linear-gradient(180deg,var(--flame),var(--ember));-webkit-background-clip:text;background-clip:text;}
+  .t2 .handle{position:absolute;bottom:28px;left:34px;}
+
+  /* T3 — Single Spark: minimal, one glowing dot, lots of dark space */
+  .t3{padding:40px;justify-content:flex-end;gap:18px;}
+  .t3 .spark{position:absolute;top:26%;left:50%;transform:translateX(-50%);width:7px;height:7px;border-radius:50%;
+    background:var(--flame);box-shadow:0 0 22px 8px rgba(245,158,45,0.45),0 0 60px 24px rgba(232,75,28,0.18);}
+  .t3 .quote{font-family:'Fraunces',serif;font-weight:340;font-style:italic;font-size:23px;line-height:1.35;text-align:center;}
+  .t3 .foot{display:flex;justify-content:center;gap:14px;align-items:baseline;}
+
+  /* T4 — Pinterest vertical: hook + body + CTA bar */
+  .t4{padding:0;justify-content:space-between;}
+  .t4 .top{padding:36px 34px 0;}
+  .t4 .eyebrow{font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:var(--smoke);margin-bottom:18px;}
+  .t4 .quote{font-weight:800;font-stretch:82%;text-transform:uppercase;font-size:40px;line-height:1.02;}
+  .t4 .quote .hot{color:var(--ember);}
+  .t4 .body{padding:0 34px;font-family:'Fraunces',serif;font-weight:340;font-size:16px;line-height:1.5;color:var(--bone);opacity:0.85;}
+  .t4 .cta{margin:0;padding:18px 34px;background:linear-gradient(90deg,var(--ember),var(--flame));color:var(--coal);
+    display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13px;letter-spacing:0.06em;}
+  .t4 .cta span:last-child{font-weight:500;font-size:12px;}
+</style>
+</head>
+<body>
+  <div class="intro">
+    <h1>The Fire Within — quote card system</h1>
+    <p>Four templates the automation script rotates through. Three Instagram squares (1080×1080) and one Pinterest vertical (1000×1500). All text is generated per-post by the Claude API; layout, color, and type stay locked so the feed reads as one brand.</p>
+  </div>
+
+  <div class="grid">
+
+    <div class="slot">
+      <span class="label">T1 · Ember Floor — Instagram 1080×1080</span>
+      <div class="card ig t1">
+        <span class="brand">The Fire Within</span>
+        <p class="quote">Burnout isn't proof you're weak. It's proof you carried <em>too much, for too long,</em> without anyone checking on the fire.</p>
+        <div class="foot">
+          <span class="handle">@thefirewithin</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <span class="label">T2 · Bold Statement — Instagram 1080×1080</span>
+      <div class="card ig t2">
+        <span class="brand">The Fire Within</span>
+        <p class="quote">You don't need more hustle.<br>You need your <span class="hot">fire back.</span></p>
+        <span class="handle">@thefirewithin</span>
+      </div>
+    </div>
+
+    <div class="slot">
+      <span class="label">T3 · Single Spark — Instagram 1080×1080</span>
+      <div class="card ig t3">
+        <span class="spark"></span>
+        <p class="quote">"One small win today is worth more than a perfect plan you never start."</p>
+        <div class="foot">
+          <span class="brand">The Fire Within</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <span class="label">T4 · Hook + CTA — Pinterest 1000×1500</span>
+      <div class="card pin t4">
+        <div class="top">
+          <p class="eyebrow">Guarding the embers</p>
+          <p class="quote">5 signs you're <span class="hot">burning out</span> — not lazy</p>
+        </div>
+        <p class="body">Most people push harder right when they should pull back. Here's how to tell the difference before the fire goes out completely.</p>
+        <div class="cta">
+          <span>The Fire Within</span>
+          <span>Read on Whop →</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+document.fonts.ready.then(function() {
+  document.querySelectorAll('.card').forEach(function(card) {
+    var quote = card.querySelector('.quote');
+    if (!quote) return;
+    var size = parseFloat(getComputedStyle(quote).fontSize);
+    var minSize = 13;
+
+    function overflows() {
+      var cr = card.getBoundingClientRect();
+      var m = cr.width * 0.08;
+      var safeLeft   = cr.left   + m;
+      var safeRight  = cr.right  - m;
+      var safeTop    = cr.top    + m;
+      var safeBottom = cr.bottom - m;
+      if (card.scrollHeight > card.clientHeight) return true;
+      var range = document.createRange();
+      range.selectNodeContents(quote);
+      var rects = range.getClientRects();
+      for (var i = 0; i < rects.length; i++) {
+        var r = rects[i];
+        if (!r.width || !r.height) continue;
+        if (r.right > safeRight || r.left < safeLeft) return true;
+        if (r.bottom > safeBottom || r.top < safeTop) return true;
+      }
+      return false;
+    }
+
+    while (overflows() && size > minSize) {
+      size -= 0.5;
+      quote.style.fontSize = size + 'px';
+    }
+  });
+});
+</script>
+</body>
+</html>

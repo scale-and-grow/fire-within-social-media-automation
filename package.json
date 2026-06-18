@@ -1,0 +1,22 @@
+{
+  "name": "fire-within-bot",
+  "version": "1.0.0",
+  "description": "Instagram automation for The Fire Within — burnout recovery brand",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "generate": "node src/index.js generate",
+    "generate:morning": "node src/index.js generate --type=morning",
+    "generate:evening": "node src/index.js generate --type=evening",
+    "publish": "node src/index.js publish",
+    "dry-run:morning": "node src/index.js generate --type=morning --dry-run",
+    "dry-run:evening": "node src/index.js generate --type=evening --dry-run",
+    "dry-run:publish": "node src/index.js publish --dry-run"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "dotenv": "^16.4.5",
+    "puppeteer": "^22.15.0"
+  }
+}

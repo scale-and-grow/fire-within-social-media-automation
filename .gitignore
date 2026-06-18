@@ -1,0 +1,19 @@
+# secrets — NEVER commit
+.env
+
+# dependencies
+node_modules/
+
+# runtime output
+generated/
+run.log
+posts-log.json
+
+# Chromium WSL2 shim — extracted binaries, not source
+.chromium-libs/
+
+# downloaded .deb packages
+*.deb
+
+# Claude Code local config
+.claude/
