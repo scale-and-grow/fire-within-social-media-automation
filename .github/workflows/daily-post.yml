@@ -1,0 +1,213 @@
+name: Fire Within — Daily Post
+
+# Four cron entries cover both EST (UTC-5) and EDT (UTC-4).
+# A DST guard in the generate job lets only the one whose ET hour
+# matches 10am or 4pm proceed; the other exits cleanly.
+on:
+  schedule:
+    - cron: '0 14 * * 1-6'   # Mon–Sat 10:00 EDT (UTC-4)
+    - cron: '0 15 * * 1-6'   # Mon–Sat 10:00 EST (UTC-5)
+    - cron: '0 20 * * 1-6'   # Mon–Sat 16:00 EDT (UTC-4)
+    - cron: '0 21 * * 1-6'   # Mon–Sat 16:00 EST (UTC-5)
+  workflow_dispatch:
+    inputs:
+      post_type:
+        description: 'Post type'
+        required: false
+        default: 'morning'
+        type: choice
+        options: [morning, evening]
+
+jobs:
+  # ── Job 1: generate content, render card, upload image ──────────────────────
+  generate:
+    name: Generate & upload image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to push images via Contents API
+
+    outputs:
+      proceed:   ${{ steps.resolve.outputs.proceed }}
+      post-type: ${{ steps.resolve.outputs.type }}
+      image-url: ${{ steps.upload.outputs.url }}
+
+    steps:
+      # ── DST guard ────────────────────────────────────────────────────────────
+      - name: Resolve post type & DST guard
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "type=${{ inputs.post_type }}" >> $GITHUB_OUTPUT
+            echo "proceed=true"                 >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          HOUR=$(TZ=America/New_York date +%H)
+          if   [ "$HOUR" = "10" ]; then
+            echo "type=morning" >> $GITHUB_OUTPUT
+            echo "proceed=true" >> $GITHUB_OUTPUT
+          elif [ "$HOUR" = "16" ]; then
+            echo "type=evening" >> $GITHUB_OUTPUT
+            echo "proceed=true" >> $GITHUB_OUTPUT
+          else
+            echo "Skipping — ET hour is $HOUR (not 10 or 16). Wrong half of DST pair."
+            echo "proceed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.resolve.outputs.proceed == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.resolve.outputs.proceed == 'true'
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # Cache Puppeteer's Chrome download across runs (~100 MB, saves ~60 s)
+      - name: Cache Puppeteer Chrome
+        if: steps.resolve.outputs.proceed == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      # Install system libraries that Chrome needs on the Ubuntu runner.
+      # The Windows .chromium-libs/ shim in src/image.js is ignored here
+      # because .chromium-libs/ does not exist on this runner.
+      - name: Install Chrome system libraries
+        if: steps.resolve.outputs.proceed == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+            libgbm1 libgtk-3-0 libnspr4 libnss3 \
+            libxcomposite1 libxdamage1 libxkbcommon0 libxrandr2 \
+            fonts-liberation
+          sudo apt-get install -y libasound2t64 2>/dev/null \
+            || sudo apt-get install -y libasound2
+
+      - name: Install Node dependencies
+        if: steps.resolve.outputs.proceed == 'true'
+        run: npm ci
+
+      # --dry-run skips posts-log.json mutation; the log lives only locally
+      - name: Generate post (Claude API + Puppeteer render)
+        if: steps.resolve.outputs.proceed == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node src/index.js generate --type=${{ steps.resolve.outputs.type }} --dry-run
+
+      # Upload image to the repo's images/ folder BEFORE the approval gate
+      # so you can click-preview the card when deciding to approve or reject.
+      - name: Upload image to GitHub
+        if: steps.resolve.outputs.proceed == 'true'
+        id: upload
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO: ${{ github.repository }}
+        run: |
+          URL=$(node -e "
+            const { getPublicUrl } = require('./src/imageProvider');
+            getPublicUrl('generated/latest-image.png')
+              .then(url => process.stdout.write(url))
+              .catch(e => { process.stderr.write(e.message + '\n'); process.exit(1); });
+          ")
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Image preview: $URL"
+
+      # Stamp the pre-uploaded URL into the caption JSON so the publish job
+      # can use it directly without re-uploading the image.
+      - name: Stamp image URL into caption data
+        if: steps.resolve.outputs.proceed == 'true'
+        env:
+          IMAGE_URL: ${{ steps.upload.outputs.url }}
+        run: |
+          node -e "
+            const fs = require('fs');
+            const d = JSON.parse(fs.readFileSync('generated/latest-caption.json', 'utf8'));
+            d.imageUrl = process.env.IMAGE_URL;
+            fs.writeFileSync('generated/latest-caption.json', JSON.stringify(d, null, 2));
+          "
+
+      # Write a rich summary so the reviewer sees the full post
+      # without digging through logs before approving.
+      - name: Write approval summary
+        if: steps.resolve.outputs.proceed == 'true'
+        env:
+          IMAGE_URL: ${{ steps.upload.outputs.url }}
+        run: |
+          node -e "
+            const fs = require('fs');
+            const d = JSON.parse(fs.readFileSync('generated/latest-caption.json', 'utf8'));
+            const lines = [
+              '## Post preview — approve or reject below',
+              '',
+              '| | |',
+              '|---|---|',
+              '| **Type** | ' + d.type + ' |',
+              '| **Template** | ' + d.template + ' |',
+              '| **Theme** | ' + d.theme + ' |',
+              '| **Quote** | ' + d.quote + ' |',
+              '',
+              '**Image:** ' + process.env.IMAGE_URL,
+              '',
+              '**Caption:**',
+              '\`\`\`',
+              d.caption,
+              '\`\`\`',
+            ];
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          "
+
+      - name: Save generated files as artifact
+        if: steps.resolve.outputs.proceed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-${{ github.run_id }}
+          path: generated/
+          retention-days: 1
+
+  # ── Job 2: manual approval gate → publish ───────────────────────────────────
+  publish:
+    name: Publish to Instagram
+    needs: generate
+    if: needs.generate.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    environment: production   # ← requires manual approval in repo Settings → Environments
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Cache Puppeteer Chrome
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      # Restore the generated/ folder (caption JSON + rendered PNG) from job 1.
+      # The imagePath in latest-caption.json is an absolute path that resolves
+      # correctly here because both jobs share the same $GITHUB_WORKSPACE layout.
+      - name: Download generated files
+        uses: actions/download-artifact@v4
+        with:
+          name: post-${{ github.run_id }}
+          path: generated/
+
+      - name: Publish to Instagram
+        env:
+          META_LONG_LIVED_TOKEN: ${{ secrets.META_LONG_LIVED_TOKEN }}
+          IG_USER_ID:            ${{ secrets.IG_USER_ID }}
+          META_APP_ID:           ${{ secrets.META_APP_ID }}
+          META_APP_SECRET:       ${{ secrets.META_APP_SECRET }}
+          GITHUB_TOKEN:          ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPO:           ${{ github.repository }}
+        run: node src/index.js publish

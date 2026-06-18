@@ -2,20 +2,17 @@ const { getPublicUrl } = require('./imageProvider');
 
 const GRAPH_API = 'https://graph.facebook.com/v19.0';
 
-async function publishToInstagram(imagePath, caption, dryRun = false) {
+async function publishToInstagram(imagePath, caption, dryRun = false, imageUrl = null) {
   if (dryRun) {
-    let imageUrl = '(not resolved — IMAGE_BASE_URL not configured)';
-    try {
-      imageUrl = await getPublicUrl(imagePath);
-    } catch {
-      // Dry-run succeeds even without image hosting configured
+    let resolvedUrl = imageUrl || '(not resolved — image hosting not configured)';
+    if (!imageUrl) {
+      try { resolvedUrl = await getPublicUrl(imagePath); } catch { /* ok in dry-run */ }
     }
-
     console.log('\n[DRY RUN] Would publish to Instagram:');
     console.log(`  Image file : ${imagePath}`);
-    console.log(`  Image URL  : ${imageUrl}`);
+    console.log(`  Image URL  : ${resolvedUrl}`);
     console.log(`\n  Caption:\n${caption}`);
-    return { dryRun: true, imageUrl };
+    return { dryRun: true, imageUrl: resolvedUrl };
   }
 
   const { META_LONG_LIVED_TOKEN, IG_USER_ID } = process.env;
@@ -23,15 +20,16 @@ async function publishToInstagram(imagePath, caption, dryRun = false) {
     throw new Error('META_LONG_LIVED_TOKEN and IG_USER_ID must be set in .env');
   }
 
-  const imageUrl = await getPublicUrl(imagePath);
-  console.log(`  Image URL: ${imageUrl}`);
+  // Use the pre-uploaded URL when available (CI flow), otherwise upload now.
+  const resolvedUrl = imageUrl || await getPublicUrl(imagePath);
+  console.log(`  Image URL: ${resolvedUrl}`);
 
   // Step 1: Create the media container
   const containerRes = await fetch(`${GRAPH_API}/${IG_USER_ID}/media`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      image_url: imageUrl,
+      image_url: resolvedUrl,
       caption,
       access_token: META_LONG_LIVED_TOKEN,
     }),
@@ -63,7 +61,7 @@ async function publishToInstagram(imagePath, caption, dryRun = false) {
     throw new Error(`Publish failed: ${JSON.stringify(publishData.error)}`);
   }
 
-  return { postId: publishData.id, containerId, imageUrl };
+  return { postId: publishData.id, containerId, imageUrl: resolvedUrl };
 }
 
 module.exports = { publishToInstagram };

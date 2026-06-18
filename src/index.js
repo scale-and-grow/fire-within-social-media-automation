@@ -179,7 +179,12 @@ async function commandPublish({ dryRun }) {
     await checkAndRefreshToken();
   }
 
-  const result = await publishToInstagram(captionData.imagePath, captionData.caption, dryRun);
+  const result = await publishToInstagram(
+    captionData.imagePath,
+    captionData.caption,
+    dryRun,
+    captionData.imageUrl || null,   // pre-uploaded URL set by CI; null triggers upload locally
+  );
 
   if (!dryRun && result.postId) {
     // Mark the matching posts-log entry as published
