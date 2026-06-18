@@ -1,8 +1,11 @@
 const Anthropic = require('@anthropic-ai/sdk');
-const fs = require('fs');
-const path = require('path');
+const { readPostedQuotes } = require('./quotesLog');
 
-const POSTS_LOG = path.join(process.cwd(), 'posts-log.json');
+const THEME_POOL = [
+  'rest', 'discipline', 'rebuilding', 'ownership',
+  'comfort zone', 'momentum', 'identity', 'fear',
+  'consistency', 'self-trust', 'small wins', 'purpose',
+];
 
 const SYSTEM_PROMPT = `You are the content voice for "The Fire Within" — a brand for ambitious people navigating burnout and rebuilding toward a life they're proud of.
 
@@ -32,37 +35,34 @@ CONTENT TERRITORY TO DRAW FROM:
 - Faith and purpose as steadying forces (woven in naturally, not every post)
 - Ownership: building a life and work you actually own`;
 
-function getRecentThemes() {
-  if (!fs.existsSync(POSTS_LOG)) return [];
-  let log;
-  try {
-    log = JSON.parse(fs.readFileSync(POSTS_LOG, 'utf8'));
-  } catch {
-    return [];
-  }
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 14);
-  return (log.posts || [])
-    .filter(p => p.published && new Date(p.generatedAt || p.date) >= cutoff)
-    .map(p => p.theme)
-    .filter(Boolean);
+function pickTheme(postedQuotes) {
+  const lastTheme = postedQuotes.length > 0
+    ? postedQuotes[postedQuotes.length - 1].theme
+    : null;
+  const pool = THEME_POOL.filter(t => t !== lastTheme);
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 async function generateCaption(type) {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const recentThemes = getRecentThemes();
+  const postedQuotes = readPostedQuotes();
+  const theme       = pickTheme(postedQuotes);
+  const recentQuotes = postedQuotes.slice(-15).map(q => q.quote);
 
   const timeContext = type === 'morning'
     ? 'This is the 10 AM "Set the tone" post. Forward-looking. A truth to carry into the day, a reframe, a small challenge. Energy without hype — not loud, just grounded.'
     : 'This is the 4 PM "Honest check-in" post. Reflective. Meets people mid-grind when the day\'s been long. Acknowledges the weight, offers a steadying thought or permission to reset. Quieter in energy than the morning post.';
 
-  const avoidBlock = recentThemes.length > 0
-    ? `\n\nIMPORTANT — themes used in the last 14 days (do NOT repeat or closely echo these):\n${recentThemes.map(t => `- ${t}`).join('\n')}`
+  const avoidQuotesBlock = recentQuotes.length > 0
+    ? `\n\nRECENTLY PUBLISHED QUOTES — do NOT repeat or closely echo any of these:\n${recentQuotes.map(q => `- "${q}"`).join('\n')}`
     : '';
 
   const userPrompt = `Generate a ${type} Instagram post for The Fire Within.
 
-${timeContext}${avoidBlock}
+${timeContext}
+
+THEME FOR THIS POST: ${theme}
+Ground your quote and caption in this specific theme.${avoidQuotesBlock}
 
 Return ONLY a valid JSON object — no markdown fences, no preamble, no extra text. Exact structure:
 {
@@ -103,6 +103,9 @@ Hashtag rules: exactly 5, all lowercase, no # prefix, mix of reach + niche (burn
 
   // Strip any # prefixes from hashtags if Claude added them
   data.hashtags = data.hashtags.map(h => h.replace(/^#/, '').toLowerCase());
+
+  // Always use our pool-picked theme so tracking stays consistent
+  data.theme = theme;
 
   return data;
 }

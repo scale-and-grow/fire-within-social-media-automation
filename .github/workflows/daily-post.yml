@@ -174,7 +174,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production   # ← requires manual approval in repo Settings → Environments
     permissions:
-      contents: read
+      contents: write   # needed to append posted-quotes.json via Contents API
 
     steps:
       - uses: actions/checkout@v4

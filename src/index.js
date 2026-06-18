@@ -8,6 +8,7 @@ const { renderImage, selectTemplate } = require('./image');
 const { publishToInstagram } = require('./publish');
 const { checkAndRefreshToken } = require('./token');
 const { appendLog } = require('./logger');
+const { appendPostedQuote } = require('./quotesLog');
 
 const POSTS_LOG = path.join(process.cwd(), 'posts-log.json');
 const GENERATED_DIR = path.join(process.cwd(), 'generated');
@@ -197,6 +198,12 @@ async function commandPublish({ dryRun }) {
       entry.postId = result.postId;
       entry.publishedAt = new Date().toISOString();
       writePostsLog(log);
+
+      await appendPostedQuote({
+        quote: captionData.quote,
+        theme: captionData.theme,
+        publishedAt: entry.publishedAt,
+      });
     }
 
     console.log(`\nPosted. Post ID: ${result.postId}`);
